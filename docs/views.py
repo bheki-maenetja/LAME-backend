@@ -1,6 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_202_ACCEPTED, HTTP_404_NOT_FOUND, HTTP_406_NOT_ACCEPTABLE, HTTP_500_INTERNAL_SERVER_ERROR
+from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_202_ACCEPTED, HTTP_204_NO_CONTENT, HTTP_404_NOT_FOUND, HTTP_406_NOT_ACCEPTABLE, HTTP_422_UNPROCESSABLE_ENTITY, HTTP_500_INTERNAL_SERVER_ERROR
 
 from .models import Doc
 from .serializers import DocSerializer
@@ -44,6 +44,23 @@ class SingleDoc(APIView):
                 {"message": f"Something is wrong\nError: {e}"},
                 status=HTTP_500_INTERNAL_SERVER_ERROR
             )
+    
+    def delete(self, _request, pk):
+        try:
+            # Finding, serialising and getting data from relevant document
+            doc = Doc.objects.get(pk=pk)
+            doc.delete()
+            return Response(status=HTTP_204_NO_CONTENT)
+        except Doc.DoesNotExist:
+            return Response(
+                {"message": "Document not found"},
+                status=HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"message": f"Something is wrong\nError: {e}"},
+                status=HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class ManyDocs(APIView):
 
@@ -52,6 +69,19 @@ class ManyDocs(APIView):
             docs = Doc.objects.all()
             serial_docs = DocSerializer(docs, many=True)
             return Response(serial_docs.data, HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {"message": f"Something is wrong\nError: {e}"},
+                status=HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def post(self, request):
+        try:
+            new_doc = DocSerializer(data=request.data)
+            if new_doc.is_valid():
+                new_doc.save()
+                return Response(new_doc.data, status=HTTP_201_CREATED)
+            return Response(new_doc.errors, status=HTTP_422_UNPROCESSABLE_ENTITY)
         except Exception as e:
             return Response(
                 {"message": f"Something is wrong\nError: {e}"},
